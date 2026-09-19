@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -7,8 +7,8 @@ export default function TimeTracking() {
   const userId = session?.user?.id;
 
   // Daten-State
-  const [projects, setProjects] = useState([]);
-  const [timeEntries, setTimeEntries] = useState([]);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [timeEntries, setTimeEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Formular-State
@@ -33,7 +33,7 @@ export default function TimeTracking() {
       .order('project_number', { ascending: true });
     
     if (error) console.error('Fehler beim Laden der Projekte:', error);
-    else setProjects(data);
+    else setProjects(data || []);
   };
 
   const fetchTimeEntries = async () => {
@@ -48,11 +48,11 @@ export default function TimeTracking() {
       .limit(20);
 
     if (error) console.error('Fehler beim Laden der Zeiten:', error);
-    else setTimeEntries(data);
+    else setTimeEntries(data || []);
     setLoading(false);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validierung: Produktive Zeiten brauchen ein Projekt
@@ -132,7 +132,7 @@ export default function TimeTracking() {
                 style={{ width: '100%', padding: '8px' }}
               >
                 <option value="">-- Projekt wählen --</option>
-                {projects.map(p => (
+                {projects.map((p: any) => (
                   <option key={p.id} value={p.id}>
                     {p.project_number} - {p.name}
                   </option>
@@ -158,7 +158,7 @@ export default function TimeTracking() {
           <div>
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Tätigkeitsbeschreibung</label>
             <textarea 
-              rows="3" 
+              rows={3} 
               placeholder="Kurze Beschreibung der Leistung..." 
               value={description} 
               onChange={e => setDescription(e.target.value)}
@@ -188,7 +188,7 @@ export default function TimeTracking() {
               </tr>
             </thead>
             <tbody>
-              {timeEntries.map(entry => (
+              {timeEntries.map((entry: any) => (
                 <tr key={entry.id} style={{ borderBottom: '1px solid #eee' }}>
                   <td style={{ padding: '10px 0' }}>{new Date(entry.entry_date).toLocaleDateString('de-DE')}</td>
                   <td>
