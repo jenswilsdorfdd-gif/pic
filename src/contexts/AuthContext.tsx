@@ -8,10 +8,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
+    // Ausfallsichere Initialisierung
+    supabase.auth.getSession()
+      .then(({ data: { session }, error }) => {
+        if (error) console.error("Session Error:", error.message);
+        setSession(session);
+      })
+      .catch((err) => console.error("Auth Exception:", err))
+      .finally(() => setLoading(false)); // Garantiert, dass der Ladebildschirm verschwindet
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
@@ -22,7 +26,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{ session, loading }}>
-      {!loading && children}
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'sans-serif' }}>
+          <h3 style={{ color: '#005b82' }}>System wird initialisiert...</h3>
+        </div>
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 };
