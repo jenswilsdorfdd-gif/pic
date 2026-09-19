@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
 export default function Projects() {
@@ -10,7 +10,6 @@ export default function Projects() {
   }, []);
 
   const fetchProjectsAndCalculate = async () => {
-    // Lädt Projekte inkl. der verknüpften Zeiten und den Stundensätzen der jeweiligen Mitarbeiter
     const { data, error } = await supabase
       .from('projects')
       .select(`
@@ -29,8 +28,7 @@ export default function Projects() {
       return;
     }
 
-    // Kalkulations-Logik: Soll vs. Ist
-    const processedProjects = data.map(project => {
+    const processedProjects = data.map((project: any) => {
       let totalHours = 0;
       let actualCosts = 0;
 
@@ -46,7 +44,6 @@ export default function Projects() {
       const budget = Number(project.total_budget || 0);
       const remainingBudget = budget - actualCosts;
       
-      // Marge = (Budget - Kosten) / Budget * 100
       const currentMargin = budget > 0 ? ((budget - actualCosts) / budget) * 100 : 0;
 
       return {
@@ -80,7 +77,7 @@ export default function Projects() {
           </tr>
         </thead>
         <tbody>
-          {projects.map(p => (
+          {projects.map((p: any) => (
             <tr key={p.id} style={{ borderBottom: '1px solid #eee' }}>
               <td style={{ padding: '12px' }}>
                 <strong>{p.project_number}</strong><br/>
