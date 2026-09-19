@@ -6,11 +6,10 @@ export default function Offers() {
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Formular-State
   const [offerNumber, setOfferNumber] = useState('');
   const [projectId, setProjectId] = useState('');
   const [netAmount, setNetAmount] = useState('');
-  const [incidentalCosts, setIncidentalCosts] = useState('5.00'); // Standard 5%
+  const [incidentalCosts, setIncidentalCosts] = useState('5.00');
   const [status, setStatus] = useState('draft');
 
   useEffect(() => {
@@ -19,8 +18,6 @@ export default function Offers() {
 
   const fetchData = async () => {
     setLoading(true);
-    
-    // 1. Projekte laden (für das Dropdown)
     const { data: projectsData, error: projectsError } = await supabase
       .from('projects')
       .select('id, project_number, name')
@@ -29,7 +26,6 @@ export default function Offers() {
     if (projectsError) console.error('Fehler beim Laden der Projekte:', projectsError);
     else setProjects(projectsData || []);
 
-    // 2. Angebote laden (inkl. verknüpfter Projektdaten)
     const { data: offersData, error: offersError } = await supabase
       .from('offers')
       .select(`
@@ -60,7 +56,6 @@ export default function Offers() {
     if (error) {
       alert('Fehler beim Speichern des Angebots: ' + error.message);
     } else {
-      // Formular zurücksetzen & Liste aktualisieren
       setOfferNumber('');
       setProjectId('');
       setNetAmount('');
@@ -75,7 +70,6 @@ export default function Offers() {
   return (
     <div style={{ display: 'flex', gap: '30px', alignItems: 'flex-start' }}>
       
-      {/* Linke Spalte: Eingabemaske */}
       <div style={{ flex: 1, background: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid #ddd' }}>
         <h2 style={{ marginTop: 0 }}>Neues Angebot erstellen</h2>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
@@ -86,7 +80,7 @@ export default function Offers() {
               type="text" 
               placeholder="z.B. A26-001" 
               value={offerNumber} 
-              onChange={e => setOfferNumber(e.target.value)} 
+              onChange={(e: any) => setOfferNumber(e.target.value)} 
               required 
               style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
             />
@@ -96,11 +90,11 @@ export default function Offers() {
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Projektzuordnung (Optional)</label>
             <select 
               value={projectId} 
-              onChange={e => setProjectId(e.target.value)} 
+              onChange={(e: any) => setProjectId(e.target.value)} 
               style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
             >
               <option value="">-- Ohne Projektbezug / Neu --</option>
-              {projects.map(p => (
+              {projects.map((p: any) => (
                 <option key={p.id} value={p.id}>
                   {p.project_number} - {p.name}
                 </option>
@@ -116,7 +110,7 @@ export default function Offers() {
               min="0"
               placeholder="z.B. 15000.00" 
               value={netAmount} 
-              onChange={e => setNetAmount(e.target.value)} 
+              onChange={(e: any) => setNetAmount(e.target.value)} 
               required 
               style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
             />
@@ -129,7 +123,7 @@ export default function Offers() {
               step="0.1" 
               min="0"
               value={incidentalCosts} 
-              onChange={e => setIncidentalCosts(e.target.value)} 
+              onChange={(e: any) => setIncidentalCosts(e.target.value)} 
               required 
               style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
             />
@@ -139,7 +133,7 @@ export default function Offers() {
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Status</label>
             <select 
               value={status} 
-              onChange={e => setStatus(e.target.value)} 
+              onChange={(e: any) => setStatus(e.target.value)} 
               style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
             >
               <option value="draft">Entwurf (Draft)</option>
@@ -155,7 +149,6 @@ export default function Offers() {
         </form>
       </div>
 
-      {/* Rechte Spalte: Angebotsliste */}
       <div style={{ flex: 2, background: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid #ddd' }}>
         <h2 style={{ marginTop: 0 }}>Angebotsbestand</h2>
         {offers.length === 0 ? (
@@ -172,7 +165,7 @@ export default function Offers() {
               </tr>
             </thead>
             <tbody>
-              {offers.map(offer => (
+              {offers.map((offer: any) => (
                 <tr key={offer.id} style={{ borderBottom: '1px solid #eee' }}>
                   <td style={{ padding: '10px' }}><strong>{offer.offer_number}</strong></td>
                   <td style={{ padding: '10px' }}>
