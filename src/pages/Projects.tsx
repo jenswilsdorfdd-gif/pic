@@ -1,116 +1,119 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
+// PICON Corporate Colors
+const COLORS = {
+  blue: '#005b82',
+  green: '#8ab511',
+  grey: '#5b5d5f',
+  lightBg: '#f8f9fa',
+  danger: '#dc3545'
+};
+
 export default function Projects() {
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchProjectsAndCalculate();
+    fetchProjects();
   }, []);
 
-  const fetchProjectsAndCalculate = async () => {
+  const fetchProjects = async () => {
+    setLoading(true);
     const { data, error } = await supabase
       .from('projects')
       .select(`
         id, project_number, name, total_budget, target_margin_percent, status,
-        time_entries (
-          hours,
-          profiles ( hourly_rate )
-        )
+        time_entries ( hours, profiles ( hourly_rate ) )
       `)
-      .eq('status', 'active')
       .order('project_number', { ascending: true });
 
-    if (error) {
-      console.error('Fehler beim Laden der Controlling-Daten:', error);
-      setLoading(false);
-      return;
+    if (!error && data) {
+      const enriched = data.map((p: any) => {
+        let actualCosts = 0;
+        if (p.time_entries) {
+          p.time_entries.forEach((entry: any) => {
+            const hrs = Number(entry.hours || 0);
+            const rate = Number(entry.profiles?.hourly_rate || 0);
+            actualCosts += (hrs * rate);
+          });
+        }
+        const budget = Number(p.total_budget || 0);
+        const margin = budget > 0 ? ((budget - actualCosts) / budget) * 100 : 0;
+        return { ...p, actualCosts, currentMargin: margin };
+      });
+      setProjects(enriched);
     }
-
-    const processedProjects = data.map((project: any) => {
-      let totalHours = 0;
-      let actualCosts = 0;
-
-      if (project.time_entries) {
-        project.time_entries.forEach((entry: any) => {
-          const hrs = Number(entry.hours || 0);
-          const rate = Number(entry.profiles?.hourly_rate || 0);
-          totalHours += hrs;
-          actualCosts += (hrs * rate);
-        });
-      }
-
-      const budget = Number(project.total_budget || 0);
-      const remainingBudget = budget - actualCosts;
-      
-      const currentMargin = budget > 0 ? ((budget - actualCosts) / budget) * 100 : 0;
-
-      return {
-        ...project,
-        totalHours,
-        actualCosts,
-        remainingBudget,
-        currentMargin
-      };
-    });
-
-    setProjects(processedProjects);
     setLoading(false);
   };
 
-  if (loading) return <p>Lade Controlling-Dashboard...</p>;
+  const formatCurrency = (val: number) =>
+    new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(val);
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <h3 style={{ color: COLORS.blue }}>Lade Projekt-Controlling...</h3>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ background: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid #ddd' }}>
-      <h2 style={{ marginTop: 0, marginBottom: '20px' }}>Projekt-Controlling (Soll-Ist-Abgleich)</h2>
-      
-      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
-        <thead>
-          <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #ddd' }}>
-            <th style={{ padding: '12px' }}>Projekt</th>
-            <th style={{ padding: '12px' }}>Soll-Budget</th>
-            <th style={{ padding: '12px' }}>Gebuchte Std.</th>
-            <th style={{ padding: '12px' }}>Ist-Kosten</th>
-            <th style={{ padding: '12px' }}>Rest-Budget</th>
-            <th style={{ padding: '12px' }}>Aktuelle Marge</th>
-          </tr>
-        </thead>
-        <tbody>
-          {projects.map((p: any) => (
-            <tr key={p.id} style={{ borderBottom: '1px solid #eee' }}>
-              <td style={{ padding: '12px' }}>
-                <strong>{p.project_number}</strong><br/>
-                <span style={{ color: '#666', fontSize: '12px' }}>{p.name}</span>
-              </td>
-              <td style={{ padding: '12px' }}>
-                {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(p.total_budget)}
-              </td>
-              <td style={{ padding: '12px' }}>{p.totalHours} h</td>
-              <td style={{ padding: '12px' }}>
-                {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(p.actualCosts)}
-              </td>
-              <td style={{ padding: '12px', color: p.remainingBudget < 0 ? 'red' : 'inherit' }}>
-                {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(p.remainingBudget)}
-              </td>
-              <td style={{ padding: '12px' }}>
-                <span style={{ 
-                  padding: '4px 8px', 
-                  borderRadius: '4px',
-                  fontWeight: 'bold',
-                  background: p.currentMargin >= p.target_margin_percent ? '#d4edda' : '#f8d7da',
-                  color: p.currentMargin >= p.target_margin_percent ? '#155724' : '#721c24'
-                }}>
-                  {p.currentMargin.toFixed(1)} %
-                </span>
-                <span style={{ fontSize: '11px', color: '#666', marginLeft: '5px' }}>
-                  (Ziel: {p.target_margin_percent}%)
-                </span>
-              </td>
+    <div style={{ background: '#fff', padding: '30px', borderRadius: '8px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+      <h1 style={{ color: COLORS.grey, borderBottom: `3px solid ${COLORS.green}`, paddingBottom: '10px', marginTop: 0 }}>
+        Projekt-Controlling (Soll/Ist)
+      </h1>
+
+      <div style={{ overflowX: 'auto', marginTop: '20px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
+          <thead>
+            <tr style={{ backgroundColor: COLORS.lightBg, borderBottom: `2px solid ${COLORS.grey}`, color: COLORS.grey }}>
+              <th style={{ padding: '12px' }}>Projektnummer</th>
+              <th style={{ padding: '12px' }}>Projektname</th>
+              <th style={{ padding: '12px' }}>Status</th>
+              <th style={{ padding: '12px', textAlign: 'right' }}>Budget (Soll)</th>
+              <th style={{ padding: '12px', textAlign: 'right' }}>Kosten (Ist)</th>
+              <th style={{ padding: '12px', textAlign: 'right' }}>Marge (Ist)</th>
+              <th style={{ padding: '12px', textAlign: 'right' }}>Zielmarge</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {projects.map(p => (
+              <tr key={p.id} style={{ borderBottom: '1px solid #eee' }}>
+                <td style={{ padding: '12px' }}><strong>{p.project_number}</strong></td>
+                <td style={{ padding: '12px' }}>{p.name}</td>
+                <td style={{ padding: '12px' }}>
+                  <span style={{
+                    padding: '4px 8px', borderRadius: '12px', fontSize: '12px',
+                    backgroundColor: p.status === 'active' ? '#d4edda' : '#e2e3e5',
+                    color: p.status === 'active' ? '#155724' : '#383d41'
+                  }}>
+                    {p.status === 'active' ? 'Aktiv' : 'Abgeschlossen'}
+                  </span>
+                </td>
+                <td style={{ padding: '12px', textAlign: 'right' }}>{formatCurrency(p.total_budget)}</td>
+                <td style={{ padding: '12px', textAlign: 'right', color: p.actualCosts > 0 ? COLORS.danger : 'inherit' }}>
+                  {formatCurrency(p.actualCosts)}
+                </td>
+                <td style={{ padding: '12px', textAlign: 'right' }}>
+                  <span style={{
+                    fontWeight: 'bold',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    backgroundColor: p.currentMargin < p.target_margin_percent ? '#f8d7da' : 'transparent',
+                    color: p.currentMargin < p.target_margin_percent ? COLORS.danger : COLORS.green
+                  }}>
+                    {p.currentMargin.toFixed(1)} %
+                  </span>
+                </td>
+                <td style={{ padding: '12px', textAlign: 'right', color: COLORS.grey }}>
+                  {p.target_margin_percent} %
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
