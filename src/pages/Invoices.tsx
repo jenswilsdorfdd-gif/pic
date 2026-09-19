@@ -6,12 +6,11 @@ export default function Invoices() {
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Formular-State
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [projectId, setProjectId] = useState('');
   const [amount, setAmount] = useState('');
   const [isPartialInvoice, setIsPartialInvoice] = useState(false);
-  const [status, setStatus] = useState('draft'); // draft, sent, paid
+  const [status, setStatus] = useState('draft');
 
   useEffect(() => {
     fetchData();
@@ -20,7 +19,6 @@ export default function Invoices() {
   const fetchData = async () => {
     setLoading(true);
     
-    // Aktive Projekte laden
     const { data: projectsData, error: projectsError } = await supabase
       .from('projects')
       .select('id, project_number, name')
@@ -30,7 +28,6 @@ export default function Invoices() {
     if (projectsError) console.error('Fehler beim Laden der Projekte:', projectsError);
     else setProjects(projectsData || []);
 
-    // Rechnungen laden
     const { data: invoicesData, error: invoicesError } = await supabase
       .from('invoices')
       .select(`
@@ -66,7 +63,6 @@ export default function Invoices() {
     if (error) {
       alert('Fehler beim Speichern der Rechnung: ' + error.message);
     } else {
-      // Formular zurücksetzen & Liste aktualisieren
       setInvoiceNumber('');
       setProjectId('');
       setAmount('');
@@ -81,7 +77,6 @@ export default function Invoices() {
   return (
     <div style={{ display: 'flex', gap: '30px', alignItems: 'flex-start' }}>
       
-      {/* Linke Spalte: Eingabemaske */}
       <div style={{ flex: 1, background: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid #ddd' }}>
         <h2 style={{ marginTop: 0 }}>Neue Rechnung erfassen</h2>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
@@ -92,7 +87,7 @@ export default function Invoices() {
               type="text" 
               placeholder="z.B. R26-001" 
               value={invoiceNumber} 
-              onChange={e => setInvoiceNumber(e.target.value)} 
+              onChange={(e: any) => setInvoiceNumber(e.target.value)} 
               required 
               style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
             />
@@ -102,12 +97,12 @@ export default function Invoices() {
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Projekt</label>
             <select 
               value={projectId} 
-              onChange={e => setProjectId(e.target.value)} 
+              onChange={(e: any) => setProjectId(e.target.value)} 
               required
               style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
             >
               <option value="">-- Projekt wählen --</option>
-              {projects.map(p => (
+              {projects.map((p: any) => (
                 <option key={p.id} value={p.id}>
                   {p.project_number} - {p.name}
                 </option>
@@ -123,7 +118,7 @@ export default function Invoices() {
               min="0"
               placeholder="z.B. 5000.00" 
               value={amount} 
-              onChange={e => setAmount(e.target.value)} 
+              onChange={(e: any) => setAmount(e.target.value)} 
               required 
               style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
             />
@@ -134,7 +129,7 @@ export default function Invoices() {
               type="checkbox" 
               id="partial"
               checked={isPartialInvoice} 
-              onChange={e => setIsPartialInvoice(e.target.checked)} 
+              onChange={(e: any) => setIsPartialInvoice(e.target.checked)} 
             />
             <label htmlFor="partial" style={{ fontWeight: 'bold', cursor: 'pointer' }}>Dies ist eine Teilrechnung (TR)</label>
           </div>
@@ -143,7 +138,7 @@ export default function Invoices() {
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Status</label>
             <select 
               value={status} 
-              onChange={e => setStatus(e.target.value)} 
+              onChange={(e: any) => setStatus(e.target.value)} 
               style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
             >
               <option value="draft">Entwurf (Draft)</option>
@@ -158,7 +153,6 @@ export default function Invoices() {
         </form>
       </div>
 
-      {/* Rechte Spalte: Rechnungsliste */}
       <div style={{ flex: 2, background: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid #ddd' }}>
         <h2 style={{ marginTop: 0 }}>Forderungen L&L (Rechnungsbestand)</h2>
         {invoices.length === 0 ? (
@@ -175,7 +169,7 @@ export default function Invoices() {
               </tr>
             </thead>
             <tbody>
-              {invoices.map(inv => (
+              {invoices.map((inv: any) => (
                 <tr key={inv.id} style={{ borderBottom: '1px solid #eee' }}>
                   <td style={{ padding: '10px' }}><strong>{inv.invoice_number}</strong></td>
                   <td style={{ padding: '10px' }}>
