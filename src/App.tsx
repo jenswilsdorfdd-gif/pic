@@ -4,35 +4,39 @@ import MainLayout from './layouts/MainLayout';
 import { supabase } from './lib/supabase';
 import { useState } from 'react';
 
-// ==========================================
-// ECHTE MODULE
-// ==========================================
 import TimeTracking from './pages/TimeTracking';
 import Projects from './pages/Projects';
 import Offers from './pages/Offers';
 import Invoices from './pages/Invoices';
-import Dashboard from './pages/Dashboard'; // <-- NEU IMPORTIERT!
+import Dashboard from './pages/Dashboard';
 
-// ==========================================
-// LOGIN KOMPONENTE
-// ==========================================
 function Login() {
   const { session } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLogin, setIsLogin] = useState(true);
 
   if (session) return <Navigate to="/" replace />;
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) alert('Login fehlgeschlagen: ' + error.message);
+    if (isLogin) {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) alert('Login fehlgeschlagen: ' + error.message);
+    } else {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) alert('Registrierung fehlgeschlagen: ' + error.message);
+      else {
+        alert('Mitarbeiter erfolgreich angelegt! Bitte jetzt einloggen.');
+        setIsLogin(true);
+      }
+    }
   };
 
   return (
     <div style={{ padding: '50px', maxWidth: '400px', margin: '0 auto', fontFamily: 'sans-serif' }}>
-      <h2>System Login</h2>
-      <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+      <h2>System Zugang</h2>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
         <input 
           type="email" 
           placeholder="E-Mail" 
@@ -43,7 +47,7 @@ function Login() {
         />
         <input 
           type="password" 
-          placeholder="Passwort" 
+          placeholder="Passwort (mind. 6 Zeichen)" 
           value={password} 
           onChange={e => setPassword(e.target.value)} 
           required 
@@ -51,18 +55,21 @@ function Login() {
         />
         <button 
           type="submit" 
-          style={{ padding: '10px', cursor: 'pointer', background: '#0056b3', color: 'white', border: 'none', borderRadius: '4px' }}
+          style={{ padding: '10px', cursor: 'pointer', background: '#005b82', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold' }}
         >
-          Einloggen
+          {isLogin ? 'Einloggen' : 'Mitarbeiter anlegen'}
         </button>
       </form>
+      <button 
+        onClick={() => setIsLogin(!isLogin)}
+        style={{ marginTop: '15px', background: 'none', border: 'none', color: '#005b82', cursor: 'pointer', textDecoration: 'underline' }}
+      >
+        {isLogin ? 'Neuen Mitarbeiter registrieren' : 'Zurück zum Login'}
+      </button>
     </div>
   );
 }
 
-// ==========================================
-// HAUPT-APP & ROUTING
-// ==========================================
 export default function App() {
   return (
     <AuthProvider>
