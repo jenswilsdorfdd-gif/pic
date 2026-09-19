@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 
 // PICON Corporate Colors
 const COLORS = {
@@ -11,6 +12,7 @@ const COLORS = {
 };
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   
   // KPI States
@@ -76,7 +78,6 @@ export default function Dashboard() {
         }
       }
       
-      // Nach schlechtester Marge sortieren
       crit.sort((a, b) => a.currentMargin - b.currentMargin);
       setCriticalProjects(crit);
     }
@@ -105,30 +106,45 @@ export default function Dashboard() {
       <div style={{ display: 'flex', gap: '20px', marginTop: '20px', flexWrap: 'wrap' }}>
         
         {/* Kachel 1: Forderungen */}
-        <div style={{ flex: '1 1 250px', background: COLORS.blue, color: '#fff', padding: '25px', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+        <div 
+          onClick={() => navigate('/invoices', { state: { filter: 'sent' } })}
+          style={{ flex: '1 1 250px', background: COLORS.blue, color: '#fff', padding: '25px', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', cursor: 'pointer', transition: 'transform 0.2s' }}
+          onMouseOver={e => e.currentTarget.style.transform = 'translateY(-3px)'}
+          onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+        >
           <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', fontWeight: 'normal', opacity: 0.9 }}>Offene Forderungen (L&L)</h3>
           <div style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '5px' }}>
             {formatCurrency(openInvoices.sum)}
           </div>
-          <div style={{ fontSize: '13px', opacity: 0.8 }}>aus {openInvoices.count} gestellten Rechnungen</div>
+          <div style={{ fontSize: '13px', opacity: 0.8 }}>{openInvoices.count} offene Rechnungen ➔ Klick für Details</div>
         </div>
 
         {/* Kachel 2: Angebote */}
-        <div style={{ flex: '1 1 250px', background: COLORS.green, color: '#fff', padding: '25px', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+        <div 
+          onClick={() => navigate('/offers', { state: { filter: 'active' } })}
+          style={{ flex: '1 1 250px', background: COLORS.green, color: '#fff', padding: '25px', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', cursor: 'pointer', transition: 'transform 0.2s' }}
+          onMouseOver={e => e.currentTarget.style.transform = 'translateY(-3px)'}
+          onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+        >
           <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', fontWeight: 'normal', opacity: 0.9 }}>Angebotsvolumen (Offen)</h3>
           <div style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '5px' }}>
             {formatCurrency(openOffers.sum)}
           </div>
-          <div style={{ fontSize: '13px', opacity: 0.8 }}>in {openOffers.count} aktiven Angeboten</div>
+          <div style={{ fontSize: '13px', opacity: 0.8 }}>{openOffers.count} aktive Angebote ➔ Klick für Details</div>
         </div>
 
         {/* Kachel 3: Kritische Projekte */}
-        <div style={{ flex: '1 1 250px', background: criticalProjects.length > 0 ? COLORS.danger : COLORS.grey, color: '#fff', padding: '25px', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+        <div 
+          onClick={() => navigate('/projects', { state: { filter: 'critical' } })}
+          style={{ flex: '1 1 250px', background: criticalProjects.length > 0 ? COLORS.danger : COLORS.grey, color: '#fff', padding: '25px', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', cursor: 'pointer', transition: 'transform 0.2s' }}
+          onMouseOver={e => e.currentTarget.style.transform = 'translateY(-3px)'}
+          onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+        >
           <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', fontWeight: 'normal', opacity: 0.9 }}>Kritische Projekte (Marge &lt; 8%)</h3>
           <div style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '5px' }}>
             {criticalProjects.length}
           </div>
-          <div style={{ fontSize: '13px', opacity: 0.8 }}>Projekte erfordern Aufmerksamkeit</div>
+          <div style={{ fontSize: '13px', opacity: 0.8 }}>Projekte erfordern Aufmerksamkeit ➔ Klick zur Analyse</div>
         </div>
 
       </div>
@@ -171,7 +187,6 @@ export default function Dashboard() {
           </table>
         )}
       </div>
-
     </div>
   );
 }
