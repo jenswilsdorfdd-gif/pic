@@ -19,7 +19,7 @@ export default function MainLayout() {
       <nav style={{ width: '250px', background: '#f4f4f4', padding: '20px', borderRight: '1px solid #ddd' }}>
         <h2>Ingenieurbüro</h2>
         <p style={{ fontSize: '12px', color: '#666', marginBottom: '30px' }}>
-          {session.user.email}
+          {session.user?.email}
         </p>
         <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '15px' }}>
           <li><Link to="/">Dashboard</Link></li>
