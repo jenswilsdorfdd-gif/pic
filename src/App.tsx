@@ -9,6 +9,7 @@ import Projects from './pages/Projects';
 import Offers from './pages/Offers';
 import Invoices from './pages/Invoices';
 import Dashboard from './pages/Dashboard';
+import Admin from './pages/Admin';
 
 function Login() {
   const { session } = useAuth();
@@ -83,6 +84,7 @@ export default function App() {
             <Route path="/projects" element={<Projects />} />
             <Route path="/offers" element={<Offers />} />
             <Route path="/invoices" element={<Invoices />} />
+            <Route path="/admin" element={<Admin />} />
           </Route>
         </Routes>
       </Router>
