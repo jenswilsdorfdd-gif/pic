@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import MainLayout from './layouts/MainLayout';
 import { supabase } from './lib/supabase';
+import { useState } from 'react';
 
 // ==========================================
 // ECHTE MODULE
@@ -11,6 +11,7 @@ import TimeTracking from './pages/TimeTracking';
 import Projects from './pages/Projects';
 import Offers from './pages/Offers';
 import Invoices from './pages/Invoices';
+import Dashboard from './pages/Dashboard'; // <-- NEU IMPORTIERT!
 
 // ==========================================
 // LOGIN KOMPONENTE
@@ -58,11 +59,6 @@ function Login() {
     </div>
   );
 }
-
-// ==========================================
-// PLATZHALTER
-// ==========================================
-const Dashboard = () => <h1>Dashboard Übersicht</h1>;
 
 // ==========================================
 // HAUPT-APP & ROUTING
