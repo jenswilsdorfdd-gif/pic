@@ -1,16 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+
+// PICON Corporate Colors
+const COLORS = {
+  blue: '#005b82',
+  green: '#8ab511',
+  grey: '#5b5d5f',
+  lightBg: '#f8f9fa',
+  warning: '#ffc107',
+  danger: '#dc3545',
+  success: '#28a745'
+};
 
 export default function Invoices() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Formular-State
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [projectId, setProjectId] = useState('');
-  const [amount, setAmount] = useState('');
-  const [isPartialInvoice, setIsPartialInvoice] = useState(false);
-  const [status, setStatus] = useState('draft');
+  const [amount, setAmount] = useState<number | ''>('');
+  const [isPartialInvoice, setIsPartialInvoice] = useState(true);
+  const [status, setStatus] = useState('sent'); // draft, sent, paid
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState({ text: '', type: '' });
 
   useEffect(() => {
     fetchData();
@@ -19,186 +34,214 @@ export default function Invoices() {
   const fetchData = async () => {
     setLoading(true);
     
-    const { data: projectsData, error: projectsError } = await supabase
-      .from('projects')
-      .select('id, project_number, name')
-      .eq('status', 'active')
-      .order('project_number', { ascending: true });
-      
-    if (projectsError) console.error('Fehler beim Laden der Projekte:', projectsError);
-    else setProjects(projectsData || []);
-
-    const { data: invoicesData, error: invoicesError } = await supabase
+    // 1. Rechnungen laden (inklusive verknüpfter Projektdaten)
+    const { data: invData, error: invError } = await supabase
       .from('invoices')
       .select(`
-        id, invoice_number, amount, is_partial_invoice, status, created_at,
+        *,
         projects ( project_number, name )
       `)
       .order('created_at', { ascending: false });
 
-    if (invoicesError) console.error('Fehler beim Laden der Rechnungen:', invoicesError);
-    else setInvoices(invoicesData || []);
+    if (!invError && invData) setInvoices(invData);
 
+    // 2. Aktive Projekte für das Dropdown laden
+    const { data: projData } = await supabase
+      .from('projects')
+      .select('id, project_number, name')
+      .eq('status', 'active')
+      .order('project_number', { ascending: true });
+
+    if (projData) setProjects(projData);
+    
     setLoading(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleCreateInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
+    setMessage({ text: '', type: '' });
 
     if (!projectId) {
-      alert('Bitte wählen Sie ein Projekt für die Rechnung aus.');
+      setMessage({ text: 'Bitte wähle ein Projekt aus.', type: 'error' });
+      setIsSubmitting(false);
       return;
     }
 
-    const { error } = await supabase
-      .from('invoices')
-      .insert([{
+    const { error } = await supabase.from('invoices').insert([
+      {
         invoice_number: invoiceNumber,
         project_id: projectId,
-        amount: parseFloat(amount),
+        amount: Number(amount),
         is_partial_invoice: isPartialInvoice,
         status: status
-      }]);
+      }
+    ]);
 
     if (error) {
-      alert('Fehler beim Speichern der Rechnung: ' + error.message);
+      setMessage({ text: 'Fehler beim Speichern: ' + error.message, type: 'error' });
     } else {
+      setMessage({ text: 'Rechnung erfolgreich erfasst.', type: 'success' });
       setInvoiceNumber('');
-      setProjectId('');
       setAmount('');
-      setIsPartialInvoice(false);
-      setStatus('draft');
+      setProjectId('');
+      setIsPartialInvoice(true);
+      setStatus('sent');
+      fetchData();
+    }
+    setIsSubmitting(false);
+  };
+
+  const handleMarkAsPaid = async (id: string) => {
+    const { error } = await supabase
+      .from('invoices')
+      .update({ status: 'paid' })
+      .eq('id', id);
+      
+    if (error) {
+      alert('Fehler beim Aktualisieren: ' + error.message);
+    } else {
       fetchData();
     }
   };
 
-  if (loading) return <p>Lade Rechnungslegung...</p>;
+  const formatCurrency = (val: number) => 
+    new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(val || 0);
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <h3 style={{ color: COLORS.blue }}>Lade Rechnungsdaten...</h3>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ display: 'flex', gap: '30px', alignItems: 'flex-start' }}>
-      
-      <div style={{ flex: 1, background: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid #ddd' }}>
-        <h2 style={{ marginTop: 0 }}>Neue Rechnung erfassen</h2>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-          
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Rechnungsnummer</label>
-            <input 
-              type="text" 
-              placeholder="z.B. R26-001" 
-              value={invoiceNumber} 
-              onChange={(e: any) => setInvoiceNumber(e.target.value)} 
-              required 
-              style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
-            />
-          </div>
+    <div style={{ background: '#fff', padding: '30px', borderRadius: '8px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+      <h1 style={{ color: COLORS.grey, borderBottom: `3px solid ${COLORS.green}`, paddingBottom: '10px', marginTop: 0 }}>
+        Rechnungslegung & Forderungen
+      </h1>
 
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Projekt</label>
-            <select 
-              value={projectId} 
-              onChange={(e: any) => setProjectId(e.target.value)} 
-              required
-              style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
-            >
-              <option value="">-- Projekt wählen --</option>
-              {projects.map((p: any) => (
-                <option key={p.id} value={p.id}>
-                  {p.project_number} - {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
+      {message.text && (
+        <div style={{ 
+          padding: '12px', marginBottom: '20px', borderRadius: '4px', fontWeight: 'bold',
+          background: message.type === 'error' ? '#f8d7da' : '#d4edda', 
+          color: message.type === 'error' ? '#721c24' : '#155724' 
+        }}>
+          {message.text}
+        </div>
+      )}
 
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Betrag (€)</label>
-            <input 
-              type="number" 
-              step="0.01" 
-              min="0"
-              placeholder="z.B. 5000.00" 
-              value={amount} 
-              onChange={(e: any) => setAmount(e.target.value)} 
-              required 
-              style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
-            />
-          </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '30px', marginTop: '20px' }}>
+        
+        {/* LINKE SPALTE: NEUE RECHNUNG */}
+        <div style={{ background: COLORS.lightBg, padding: '20px', borderRadius: '8px', border: '1px solid #ddd', alignSelf: 'start' }}>
+          <h2 style={{ fontSize: '18px', color: COLORS.blue, marginTop: 0 }}>Rechnungsausgang erfassen</h2>
+          <form onSubmit={handleCreateInvoice} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '4px' }}>Rechnungsnummer</label>
+              <input type="text" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} required style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }} placeholder="z.B. R26-089"/>
+            </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <input 
-              type="checkbox" 
-              id="partial"
-              checked={isPartialInvoice} 
-              onChange={(e: any) => setIsPartialInvoice(e.target.checked)} 
-            />
-            <label htmlFor="partial" style={{ fontWeight: 'bold', cursor: 'pointer' }}>Dies ist eine Teilrechnung (TR)</label>
-          </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '4px' }}>Projekt</label>
+              <select value={projectId} onChange={e => setProjectId(e.target.value)} required style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}>
+                <option value="">-- Projekt wählen --</option>
+                {projects.map(p => (
+                  <option key={p.id} value={p.id}>{p.project_number} - {p.name}</option>
+                ))}
+              </select>
+            </div>
 
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Status</label>
-            <select 
-              value={status} 
-              onChange={(e: any) => setStatus(e.target.value)} 
-              style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
-            >
-              <option value="draft">Entwurf (Draft)</option>
-              <option value="sent">Versendet (Sent)</option>
-              <option value="paid">Bezahlt (Paid)</option>
-            </select>
-          </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '4px' }}>Netto-Betrag (€)</label>
+              <input type="number" step="0.01" value={amount} onChange={e => setAmount(Number(e.target.value))} required style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }} />
+            </div>
 
-          <button type="submit" style={{ padding: '10px', background: '#0056b3', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', marginTop: '10px' }}>
-            Rechnung speichern
-          </button>
-        </form>
-      </div>
+            <div style={{ display: 'flex', gap: '15px', alignItems: 'center', background: '#fff', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', cursor: 'pointer' }}>
+                <input type="radio" name="invoiceType" checked={isPartialInvoice} onChange={() => setIsPartialInvoice(true)} />
+                Teilrechnung (TR)
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', cursor: 'pointer' }}>
+                <input type="radio" name="invoiceType" checked={!isPartialInvoice} onChange={() => setIsPartialInvoice(false)} />
+                Schlussrechnung (SR)
+              </label>
+            </div>
 
-      <div style={{ flex: 2, background: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid #ddd' }}>
-        <h2 style={{ marginTop: 0 }}>Forderungen L&L (Rechnungsbestand)</h2>
-        {invoices.length === 0 ? (
-          <p>Noch keine Rechnungen im System.</p>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '4px' }}>Status</label>
+              <select value={status} onChange={e => setStatus(e.target.value)} style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}>
+                <option value="draft">Entwurf</option>
+                <option value="sent">Versendet (Offene Forderung)</option>
+                <option value="paid">Bezahlt</option>
+              </select>
+            </div>
+
+            <button type="submit" disabled={isSubmitting} style={{ padding: '10px', background: COLORS.blue, color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', marginTop: '5px' }}>
+              {isSubmitting ? 'Speichere...' : 'Rechnung verbuchen'}
+            </button>
+          </form>
+        </div>
+
+        {/* RECHTE SPALTE: RECHNUNGSLISTE */}
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
             <thead>
-              <tr style={{ borderBottom: '2px solid #eee', background: '#f8f9fa' }}>
-                <th style={{ padding: '10px' }}>Rechnungs-Nr.</th>
+              <tr style={{ backgroundColor: COLORS.grey, color: '#fff', textAlign: 'left' }}>
+                <th style={{ padding: '10px' }}>Rechnung</th>
                 <th style={{ padding: '10px' }}>Projekt</th>
+                <th style={{ padding: '10px', textAlign: 'right' }}>Betrag</th>
                 <th style={{ padding: '10px' }}>Typ</th>
-                <th style={{ padding: '10px' }}>Betrag</th>
                 <th style={{ padding: '10px' }}>Status</th>
+                <th style={{ padding: '10px' }}>Aktion</th>
               </tr>
             </thead>
             <tbody>
-              {invoices.map((inv: any) => (
-                <tr key={inv.id} style={{ borderBottom: '1px solid #eee' }}>
-                  <td style={{ padding: '10px' }}><strong>{inv.invoice_number}</strong></td>
-                  <td style={{ padding: '10px' }}>
-                    {inv.projects ? `${inv.projects.project_number} - ${inv.projects.name}` : <span style={{ color: '#999', fontStyle: 'italic' }}>Unbekannt/Gelöscht</span>}
-                  </td>
-                  <td style={{ padding: '10px' }}>
-                    {inv.is_partial_invoice ? <span style={{color: '#856404', background: '#fff3cd', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold'}}>TR</span> : <span style={{color: '#155724', background: '#d4edda', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold'}}>SR</span>}
-                  </td>
-                  <td style={{ padding: '10px' }}>
-                    {new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(inv.amount)}
-                  </td>
-                  <td style={{ padding: '10px' }}>
-                    <span style={{
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      background: inv.status === 'paid' ? '#d4edda' : inv.status === 'sent' ? '#cce5ff' : '#e2e3e5',
-                      color: inv.status === 'paid' ? '#155724' : inv.status === 'sent' ? '#004085' : '#383d41'
-                    }}>
-                      {inv.status.toUpperCase()}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {invoices.length === 0 ? (
+                <tr><td colSpan={6} style={{ padding: '20px', textAlign: 'center', color: COLORS.grey }}>Keine Rechnungen vorhanden.</td></tr>
+              ) : (
+                invoices.map(inv => (
+                  <tr key={inv.id} style={{ borderBottom: '1px solid #eee' }}>
+                    <td style={{ padding: '10px' }}><strong>{inv.invoice_number}</strong></td>
+                    <td style={{ padding: '10px' }}>
+                      <span style={{ fontSize: '12px', color: COLORS.grey }}>
+                        {inv.projects?.project_number}
+                      </span>
+                    </td>
+                    <td style={{ padding: '10px', textAlign: 'right', fontWeight: 'bold' }}>
+                      {formatCurrency(inv.amount)}
+                    </td>
+                    <td style={{ padding: '10px' }}>
+                      {inv.is_partial_invoice ? (
+                        <span style={{ background: '#e2e3e5', padding: '2px 6px', borderRadius: '4px', fontSize: '11px' }}>TR</span>
+                      ) : (
+                        <span style={{ background: '#d1ecf1', color: '#0c5460', padding: '2px 6px', borderRadius: '4px', fontSize: '11px' }}>SR</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '10px' }}>
+                      {inv.status === 'draft' && <span style={{ color: COLORS.grey }}>Entwurf</span>}
+                      {inv.status === 'sent' && <span style={{ color: COLORS.danger, fontWeight: 'bold' }}>Offen</span>}
+                      {inv.status === 'paid' && <span style={{ color: COLORS.success, fontWeight: 'bold' }}>Bezahlt</span>}
+                    </td>
+                    <td style={{ padding: '10px' }}>
+                      {inv.status === 'sent' && (
+                        <button 
+                          onClick={() => handleMarkAsPaid(inv.id)}
+                          style={{ background: COLORS.green, color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>
+                          Als bezahlt markieren
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
 
+      </div>
     </div>
   );
 }
