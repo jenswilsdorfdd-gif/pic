@@ -1,93 +1,95 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import MainLayout from './layouts/MainLayout';
-import { supabase } from './lib/supabase';
-import { useState } from 'react';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
-import TimeTracking from './pages/TimeTracking';
-import Projects from './pages/Projects';
-import Offers from './pages/Offers';
-import Invoices from './pages/Invoices';
-import Dashboard from './pages/Dashboard';
-import Admin from './pages/Admin';
+const COLORS = {
+  blue: '#005b82',
+  green: '#8ab511',
+  grey: '#5b5d5f',
+  lightBg: '#f8f9fa',
+};
 
-function Login() {
+export default function MainLayout() {
   const { session } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLogin, setIsLogin] = useState(true);
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  if (session) return <Navigate to="/" replace />;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isLogin) {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) alert('Login fehlgeschlagen: ' + error.message);
-    } else {
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) alert('Registrierung fehlgeschlagen: ' + error.message);
-      else {
-        alert('Mitarbeiter erfolgreich angelegt! Bitte jetzt einloggen.');
-        setIsLogin(true);
-      }
-    }
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/login');
   };
 
-  return (
-    <div style={{ padding: '50px', maxWidth: '400px', margin: '0 auto', fontFamily: 'sans-serif' }}>
-      <h2>System Zugang</h2>
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-        <input 
-          type="email" 
-          placeholder="E-Mail" 
-          value={email} 
-          onChange={e => setEmail(e.target.value)} 
-          required 
-          style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc' }} 
-        />
-        <input 
-          type="password" 
-          placeholder="Passwort (mind. 6 Zeichen)" 
-          value={password} 
-          onChange={e => setPassword(e.target.value)} 
-          required 
-          style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc' }} 
-        />
-        <button 
-          type="submit" 
-          style={{ padding: '10px', cursor: 'pointer', background: '#005b82', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold' }}
-        >
-          {isLogin ? 'Einloggen' : 'Mitarbeiter anlegen'}
-        </button>
-      </form>
-      <button 
-        onClick={() => setIsLogin(!isLogin)}
-        style={{ marginTop: '15px', background: 'none', border: 'none', color: '#005b82', cursor: 'pointer', textDecoration: 'underline' }}
-      >
-        {isLogin ? 'Neuen Mitarbeiter registrieren' : 'Zurück zum Login'}
-      </button>
-    </div>
-  );
-}
+  const navItems = [
+    { path: '/', label: 'Executive Dashboard' },
+    { path: '/time-tracking', label: 'Zeiterfassung' },
+    { path: '/projects', label: 'Projekt-Controlling' },
+    { path: '/offers', label: 'Angebote' },
+    { path: '/invoices', label: 'Rechnungen' },
+    { path: '/admin', label: 'Administration' },
+  ];
 
-export default function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          
-          <Route element={<MainLayout />}>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/time-tracking" element={<TimeTracking />} />
-            <Route path="/projects" element={<Projects />} />
-            <Route path="/offers" element={<Offers />} />
-            <Route path="/invoices" element={<Invoices />} />
-            <Route path="/admin" element={<Admin />} />
-          </Route>
-        </Routes>
-      </Router>
-    </AuthProvider>
+    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: COLORS.lightBg, fontFamily: 'sans-serif' }}>
+      
+      {/* Sidebar Navigation */}
+      <aside style={{ width: '260px', backgroundColor: COLORS.blue, color: '#fff', display: 'flex', flexDirection: 'column', boxShadow: '2px 0 5px rgba(0,0,0,0.1)' }}>
+        <div style={{ padding: '25px 20px', fontSize: '22px', letterSpacing: '1px', borderBottom: `4px solid ${COLORS.green}` }}>
+          <strong>PICON</strong> SYSTEM
+        </div>
+
+        <nav style={{ flex: 1, padding: '20px 0' }}>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {navItems.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <li key={item.path}>
+                  <Link
+                    to={item.path}
+                    style={{
+                      display: 'block',
+                      padding: '16px 25px',
+                      color: '#fff',
+                      textDecoration: 'none',
+                      backgroundColor: isActive ? 'rgba(255,255,255,0.08)' : 'transparent',
+                      borderLeft: isActive ? `6px solid ${COLORS.green}` : '6px solid transparent',
+                      fontWeight: isActive ? 'bold' : 'normal',
+                      transition: 'all 0.2s ease-in-out'
+                    }}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+
+        {/* User Info & Logout */}
+        <div style={{ padding: '20px', borderTop: '1px solid rgba(255,255,255,0.1)', fontSize: '13px' }}>
+          <div style={{ marginBottom: '15px', opacity: 0.8, wordBreak: 'break-all' }}>
+            Angemeldet als:<br/>
+            <strong style={{ fontSize: '14px', color: COLORS.green }}>{session?.user?.email}</strong>
+          </div>
+          <button
+            onClick={handleLogout}
+            style={{
+              width: '100%', padding: '10px', backgroundColor: 'transparent',
+              color: '#fff', border: '1px solid rgba(255,255,255,0.4)', borderRadius: '4px',
+              cursor: 'pointer', fontWeight: 'bold', transition: 'background 0.2s'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            Sicher abmelden
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <main style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
+        <Outlet />
+      </main>
+      
+    </div>
   );
 }
